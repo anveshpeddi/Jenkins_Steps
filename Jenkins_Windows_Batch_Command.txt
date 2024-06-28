@@ -1,0 +1,75 @@
+@ECHO OFF
+:: JENKINS home directory
+set JENKINHOMEDIR=D:\Jenkins\data
+:: JENKINS HMI workspace
+set JENKINWORKSPACEDIR=%JENKINHOMEDIR%\workspace\HMI-Miner-NewRepo
+:: SVN path of the required additional files like SystemApplication.bat, AppExtractor.bat, Locale.xml and soon
+set REQADDFILESDIR="D:\Delivarables_To_Client"
+:: Specifies AppExtractor directory in Jenkins workspace
+set APPEXTRACTORFILES=%JENKINWORKSPACEDIR%\AppExtractor\src\main\resources\files
+cd /d %REQADDFILESDIR%
+del %APPEXTRACTORFILES%\* /F /Q 
+for /d %%p in (%APPEXTRACTORFILES%\*) Do rd /Q /S "%%p"
+xcopy %REQADDFILESDIR% %APPEXTRACTORFILES% /s /e /i /Y /v /q
+echo Required files and folders are copied to AppExtractor Files folder
+:: Data Adapter file name
+set DATAADAPTERZIP=DataAdapter.zip
+:: DataAdapter.zip file path
+set DATAADAPTERPATH=%APPEXTRACTORFILES%\%DATAADAPTERZIP%
+:: Specifies target directory name
+set TARGETDIRNAME=FB20ApplicationSoftware
+set curdir=%JENKINHOMEDIR%
+set LogFile=%curdir%\logfile.txt
+::Echo 
+set echodescone=************************** BUILD PROCESS STARTED @ %date% %time% ****************************
+set echodesctwo================= Please wait build process is in progress ================
+set echodescthree================= Build process is successfully completed ================
+echo %echodescone% 
+echo %echodescone% >> %LogFile% 
+echo %echodesctwo% >> %LogFile%  
+echo %echodesctwo%
+echo --------------------------------------------------- >> %LogFile% 
+echo Current Directory : %curdir% >> %LogFile% 
+echo JENKIN Directory : %JENKINHOMEDIR% >> %LogFile%
+echo JENKIN WorkSpace Directory : %JENKINWORKSPACEDIR% >> %LogFile%
+echo --------------------------------------------------- >> %LogFile%
+
+cd  /d %JENKINWORKSPACEDIR%
+IF EXIST %TARGETDIRNAME% (
+rmdir /s /q %TARGETDIRNAME%
+)
+IF EXIST %TARGETDIRNAME%.zip (
+del %TARGETDIRNAME%.zip
+)
+mkdir %TARGETDIRNAME%
+echo %TARGETDIRNAME% directory is created >> %LogFile%
+echo cd %TARGETDIRNAME%
+echo %JENKINWORKSPACEDIR%\code\target\HMIApp.zip
+cd %TARGETDIRNAME%
+copy %JENKINWORKSPACEDIR%\code\target\HMIApp.zip . > nul
+jar -cMf HMIApplication.zip HMIApp.zip
+del HMIApp.zip
+echo HMIApplication.zip is created >> %LogFile%
+copy %DATAADAPTERPATH% . > nul
+copy %JENKINWORKSPACEDIR%\SystemApp\target\SystemApp.zip . > nul
+jar -cMf SystemApplication.zip SystemApp.zip %DATAADAPTERZIP%
+del %DATAADAPTERZIP%
+del SystemApp.zip
+echo SystemApplication.zip is created >> %LogFile%
+copy %JENKINWORKSPACEDIR%\AppExtractor\target\AppExtractor.jar . > nul
+robocopy %APPEXTRACTORFILES% . /xf %DATAADAPTERZIP% > nul
+robocopy %APPEXTRACTORFILES%\web web /s /e > nul
+robocopy %APPEXTRACTORFILES%\SurfaceSystem SurfaceSystem  /s /e > nul
+copy SystemApplication.zip SurfaceSystem > nul
+copy AppExtractor.* SurfaceSystem > nul
+echo required script files along with remote and surface system files are copied >> %LogFile%
+cd ..
+echo %TARGETDIRNAME%.zip creation is in process >> %LogFile%
+jar -cMf %TARGETDIRNAME%.zip %TARGETDIRNAME%
+rmdir /s /q %TARGETDIRNAME%
+echo %TARGETDIRNAME%.zip is created @ %curdir%. >> %LogFile%
+echo %echodescthree% >> %LogFile%
+echo %echodescthree%
+set echodescfour=************************** BUILD PROCESS END @ %date% %time% ****************************
+echo %echodescfour%
+echo %echodescfour% >> %LogFile%
